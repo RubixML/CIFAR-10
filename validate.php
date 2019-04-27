@@ -28,7 +28,7 @@ foreach (glob(__DIR__ . '/test/*.png') as $file) {
     $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
 }
 
-$dataset = Labeled::fromIterator($samples, $labels);
+$dataset = new Labeled($samples, $labels);
 
 $estimator = PersistentModel::load(new Filesystem(MODEL_FILE));
 

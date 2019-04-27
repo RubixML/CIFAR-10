@@ -8,10 +8,9 @@ use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\Other\Loggers\Screen;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\NeuralNet\Layers\Dense;
-use Rubix\ML\NeuralNet\Layers\PReLU;
-use Rubix\ML\NeuralNet\Layers\Dropout;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
+use Rubix\ML\NeuralNet\Layers\BatchNorm;
 use Rubix\ML\NeuralNet\Layers\Activation;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
@@ -38,7 +37,7 @@ foreach (glob(__DIR__ . '/train/*.png') as $file) {
     $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
 }
 
-$dataset = Labeled::fromIterator($samples, $labels);
+$dataset = new Labeled($samples, $labels);
 
 $estimator = new PersistentModel(
     new Pipeline([
@@ -48,19 +47,18 @@ $estimator = new PersistentModel(
     ], new MultiLayerPerceptron([
         new Dense(200),
         new Activation(new LeakyReLU()),
-        new Dropout(0.2),
+        new Dense(200),
+        new BatchNorm(),
+        new Activation(new LeakyReLU()),
         new Dense(200),
         new Activation(new LeakyReLU()),
-        new Dropout(0.2),
-        new Dense(200),
+        new Dense(100),
+        new BatchNorm(),
         new Activation(new LeakyReLU()),
-        new Dropout(0.2),
         new Dense(100),
         new Activation(new LeakyReLU()),
-        new Dense(50),
-        new PReLU(),
     ], 100, new Adam(0.001), 1e-4)),
-    new Filesystem(MODEL_FILE)
+    new Filesystem(MODEL_FILE, true)
 );
 
 $estimator->setLogger(new Screen('CIFAR10'));
@@ -68,7 +66,7 @@ $estimator->setLogger(new Screen('CIFAR10'));
 $estimator->train($dataset);
 
 $writer = Writer::createFromPath(PROGRESS_FILE, 'w+');
-$writer->insertOne(['loss', 'score']);
+$writer->insertOne(['score', 'loss']);
 $writer->insertAll(array_map(null, $estimator->scores(), $estimator->steps()));
 
 if (strtolower(readline('Save this model? (y|[n]): ')) === 'y') {
