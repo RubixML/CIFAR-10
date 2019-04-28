@@ -45,6 +45,8 @@ The [Multi Layer Perceptron](https://github.com/RubixML/RubixML#multi-layer-perc
 
 We'll need to wrap the base estimator in a transformer Pipeline to convert the images from the dataset into standardized raw pixel data on the fly. An [Image Resizer](https://github.com/RubixML/RubixML#image-resizer) ensures that all input vectors are of the same dimensionality. The [Image Vectorizer](https://github.com/RubixML/RubixML#image-vectorizer) handles extracting the raw color data. Then, the [Z Scale Standardizer](https://github.com/RubixML/RubixML#z-scale-standardizer) scales and centers the input vectors to have a mean of 0 and a standard deviation of 1.
 
+Wrapping the entire Pipeline in a [Persistent Model](https://github.com/RubixML/RubixML#persistent-model) allows us to save the model so we can use it in another process to make predictions on unknown images.
+
 ```php
 use Rubix\ML\Pipeline;
 use Rubix\ML\PersistentModel;
@@ -78,7 +80,7 @@ $estimator = new PersistentModel(
         new Dense(100),
         new Activation(new LeakyReLU()),
     ], 100, new Adam(0.001), 1e-4)),
-    new Filesystem(MODEL_FILE, true)
+    new Filesystem('cifar-10.model')
 );
 ```
 
@@ -88,10 +90,65 @@ Now all we have to do is pass the dataset to the estimator's `train()` method to
 $estimator->train($dataset);
 ```
 
+Then save the model so we can run cross validation on it in the next section.
+
+```php
+$estimator->save();
+```
+
 ### Validation
+Cross validation is the process of testing a model using samples that the learner has never seen before. In addition to the training set, the CIFAR-10 dataset includes a 10,000 testing samples that we can use to score the model's generalization ability. We start by importing the testing samples located in the *test* folder into a Labeled dataset object.
+
+```php
+use Rubix\ML\Datasets\Labeled;
+
+$samples = $labels = [];
+
+foreach (glob(__DIR__ . '/test/*.png') as $file) {
+    $samples[] = [imagecreatefrompng($file)];
+    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+}
+
+$dataset = new Labeled($samples, $labels);
+```
+
+Since we saved our model after training in the last section, we can load it whenever we need to use it in another process such as to make predictions or, in this case, to test how well our training session went by generating a cross validation report. The `load()` factory method on the Persistent Model class takes a pre-configured Persister pointing to the location of the model in storage as its only argument and returns the estimator object in the last known saved state.
+
+```php
+use Rubix\ML\PersistentModel;
+use Rubix\ML\Persisters\Filesystem;
+
+$estimator = PersistentModel::load(new Filesystem('cifar-10.model'));
+```
+
+We'll need the predictions produced by the neural network estimator from the testing set to pass to a report generator along with the actual class labels given in the testing set. To return an array of predictions, pass the testing set to the `predict()` method on the estimator.
+
+```php
+$predictions = $estimator->predict($dataset);
+```
+
+The Multiclass Breakdown and Confusion Matrix are cross validation reports that show performance of the model on a class by class basis. We'll wrap them both in an Aggregate Report and pass our predictions along with the ground truth labels from the testing set to the `generate()` method to return an array with both reports.
+
+```php
+use Rubix\ML\CrossValidation\Reports\AggregateReport;
+use Rubix\ML\CrossValidation\Reports\ConfusionMatrix;
+use Rubix\ML\CrossValidation\Reports\MulticlassBreakdown;
+
+$report = new AggregateReport([
+    new MulticlassBreakdown(),
+    new ConfusionMatrix(),
+]);
+
+$results = $report->generate($predictions, $dataset->labels());
+
+var_dump($results);
+```
+
+Take a look at the reports and see how the model performed. In the next section we'll take some unlabeled images and see if the network can guess them correctly.
+
+### Prediction
 
 On the map ...
-
 
 ## Original Dataset
 Creator: Alex Krizhevsky
