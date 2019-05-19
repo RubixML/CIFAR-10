@@ -3,7 +3,7 @@
 Computer vision is one of the most fascinating use cases for deep learning because it allows a computer to see the world that we live in. CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dataset](https://en.wikipedia.org/wiki/CIFAR-10) consisting of 60,000 32x32 color images in 10 classes (dog, cat, car, etc.) with 6,000 images per class. In this tutorial, we'll use the CIFAR-10 dataset to train a feed forward multi layer neural network to recognize objects within images using Rubix ML in PHP.
 
 - **Difficulty**: Hard
-- **Training time**: Long
+- **Training time**: < 24 Hours
 - **Memory needed**: > 8G
 
 ## Installation
@@ -52,6 +52,7 @@ use Rubix\ML\Pipeline;
 use Rubix\ML\PersistentModel;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\NeuralNet\Layers\Dense;
+use Rubix\ML\NeuralNet\Layers\PReLU;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
@@ -78,9 +79,9 @@ $estimator = new PersistentModel(
         new BatchNorm(),
         new Activation(new LeakyReLU()),
         new Dense(100),
-        new Activation(new LeakyReLU()),
-    ], 100, new Adam(0.001), 1e-4)),
-    new Filesystem('cifar-10.model')
+        new PReLU(),
+    ], 100, new Adam(0.001))),
+    new Filesystem(MODEL_FILE, true)
 );
 ```
 
@@ -148,7 +149,7 @@ Take a look at the reports and see how the model performed. In the next section 
 
 ### Prediction
 
-On the map ...
+Coming soon ...
 
 ## Original Dataset
 Creator: Alex Krizhevsky

@@ -8,6 +8,7 @@ use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\Other\Loggers\Screen;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\NeuralNet\Layers\Dense;
+use Rubix\ML\NeuralNet\Layers\PReLU;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
@@ -56,8 +57,8 @@ $estimator = new PersistentModel(
         new BatchNorm(),
         new Activation(new LeakyReLU()),
         new Dense(100),
-        new Activation(new LeakyReLU()),
-    ], 100, new Adam(0.001), 1e-4)),
+        new PReLU(),
+    ], 100, new Adam(0.001))),
     new Filesystem(MODEL_FILE, true)
 );
 
@@ -69,6 +70,8 @@ $writer = Writer::createFromPath(PROGRESS_FILE, 'w+');
 $writer->insertOne(['score', 'loss']);
 $writer->insertAll(array_map(null, $estimator->scores(), $estimator->steps()));
 
-if (strtolower(readline('Save this model? (y|[n]): ')) === 'y') {
+echo 'Progress saved to ' . PROGRESS_FILE . PHP_EOL;
+
+if (strtolower(trim(readline('Save this model? (y|[n]): '))) === 'y') {
     $estimator->save();
 }
