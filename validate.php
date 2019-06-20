@@ -12,6 +12,8 @@ use Rubix\ML\CrossValidation\Reports\MulticlassBreakdown;
 const MODEL_FILE = 'cifar-10.model';
 const REPORT_FILE = 'report.json';
 
+ini_set('memory_limit', '-1');
+
 echo '╔═════════════════════════════════════════════════════╗' . PHP_EOL;
 echo '║                                                     ║' . PHP_EOL;
 echo '║ CIFAR 10 Image Classifier w/ Multi Layer Perceptron ║' . PHP_EOL;
