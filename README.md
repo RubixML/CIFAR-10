@@ -78,7 +78,7 @@ $estimator = new PersistentModel(
         new Dense(100),
         new BatchNorm(),
         new Activation(new LeakyReLU()),
-        new Dense(100),
+        new Dense(50),
         new PReLU(),
     ], 100, new Adam(0.001))),
     new Filesystem(MODEL_FILE, true)
