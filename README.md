@@ -2,7 +2,7 @@
 CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dataset](https://en.wikipedia.org/wiki/CIFAR-10) consisting of 60,000 32 x 32 color images in 10 classes (dog, cat, car, ship, etc.) with 6,000 images per class. In this tutorial, we'll use the CIFAR-10 dataset to train a feed forward neural network to recognize the primary object within images using Rubix ML.
 
 - **Difficulty**: Hard
-- **Training time**: Hours
+- **Training time**: Days
 - **Memory needed**: > 8G
 
 ## Installation
@@ -13,7 +13,7 @@ $ git clone https://github.com/RubixML/CIFAR-10
 
 > **Note**: Cloning may take longer than usual because of the large dataset.
 
-Install project dependencies with [Composer](http://getcomposer.com):
+Install project dependencies with [Composer](http://getcomposer.org/):
 ```sh
 $ composer install
 ```
