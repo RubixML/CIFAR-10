@@ -19,7 +19,7 @@
     "require": {
         "php": ">=7.1.3",
         "league/csv": "^9.2",
-        "rubix/ml": "^0.0.14-beta"
+        "rubix/ml": "^0.0.15-beta"
     },
     "config": {
         "preferred-install": "dist",
