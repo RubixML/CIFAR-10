@@ -1,9 +1,9 @@
-# CIFAR-10 Image Recognizer
+# Rubix ML - CIFAR-10 Image Recognizer
 CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dataset](https://en.wikipedia.org/wiki/CIFAR-10) consisting of 60,000 32 x 32 color images in 10 classes (dog, cat, car, ship, etc.) with 6,000 images per class. In this tutorial, we'll use the CIFAR-10 dataset to train a feed forward neural network to recognize the primary object within images using Rubix ML.
 
 - **Difficulty**: Hard
 - **Training time**: Days
-- **Memory needed**: > 8G
+- **Memory needed**: 10G
 
 ## Installation
 Clone the project locally with [Git](https://git-scm.com/):
@@ -32,13 +32,12 @@ The CIFAR-10 data comes to us in the form of 32 x 32 pixel PNG image files which
 ```php
 $samples = $labels = [];
 
-foreach (glob(__DIR__ . '/train/*.png') as $file) {
+foreach (glob('train/*.png') as $file) {
     $samples[] = [imagecreatefrompng($file)];
     $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
 }
 ```
 
-### Dataset Preparation
 Then, load the samples and labels into a [Labeled](https://docs.rubixml.com/en/latest/datasets/labeled.html) dataset object.
 
 ```php
@@ -47,10 +46,11 @@ use Rubix\ML\Datasets\Labeled;
 $dataset = new Labeled($samples, $labels);
 ```
 
+### Dataset Preparation
+We'll need to wrap the base learner in a transformer Pipeline to convert the images from the dataset into standardized raw pixel data on the fly. An [Image Resizer](https://docs.rubixml.com/en/latest/transformers/image-resizer.html) ensures that all input vectors are of the same dimensionality, just in case. The [Image Vectorizer](https://docs.rubixml.com/en/latest/transformers/image-vectorizer.html) handles extracting the raw color channel data such as the red, green, and blue (RGB) intensities. Finally, the [Z Scale Standardizer](https://docs.rubixml.com/en/latest/transformers/z-scale-standardizer.html) scales and centers the vectorized color data to a mean of 0 and a standard deviation of 1. This last step will help the network learn quicker.
+
 ### Instantiating the Learner
 The [Multi Layer Perceptron](https://docs.rubixml.com/en/latest/classifiers/multi-layer-perceptron.html) is a type of deep learning model we'll train to recognize images from the CIFAR-10 dataset. It uses Gradient Descent with Backpropagation over multiple layers of *neurons* to train the network by gradually updating the signal that each neuron produces in response to a sample. In between [Dense](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/dense.html) neuronal layers we have an [Activation](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/activation.html) layer that performs a non-linear transformation of the neuron's output using a user-defined activation function. For the purpose of this tutorial we'll use the [ELU](https://docs.rubixml.com/en/latest/neural-network/activation-functions/elu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. Lastly, we add [Batch Norm](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/batch-norm.html) layers after every two Dense layers to help the network train faster by normalizing the activations as well as improve its generalization ability through the introduction of mild stochastic noise.
-
-We'll need to wrap the base learner in a transformer Pipeline to convert the images from the dataset into standardized raw pixel data on the fly. An [Image Resizer](https://docs.rubixml.com/en/latest/transformers/image-resizer.html) ensures that all input vectors are of the same dimensionality, just in case. The [Image Vectorizer](https://docs.rubixml.com/en/latest/transformers/image-vectorizer.html) handles extracting the raw color data. Finally, the [Z Scale Standardizer](https://docs.rubixml.com/en/latest/transformers/z-scale-standardizer.html) scales and centers the vectorized color data to a mean of 0 and a standard deviation of 1. This last step will help the network learn quicker.
 
 ```php
 use Rubix\ML\Pipeline;
@@ -77,7 +77,7 @@ $estimator = new PersistentModel(
         new Dense(200),
         new BatchNorm(),
         new Activation(new ELU()),
-        new Dense(100),
+        new Dense(200),
         new Activation(new ELU()),
         new Dense(100),
         new BatchNorm(),
@@ -92,26 +92,26 @@ $estimator = new PersistentModel(
 Wrapping the entire Pipeline in a [Persistent Model](https://docs.rubixml.com/en/latest/persistent-model.html) allows us to save the model so we can use it in another process to make predictions on unknown images.
 
 ### Training
-Now, all we have to do is pass the dataset to the estimator's `train()` method to begin training the network.
+Now, all we have to do is pass the dataset to the `train()` method to begin training the network.
 
 ```php
 $estimator->train($dataset);
 ```
 
 ### Saving
-Before exiting the script, save the model so we can run cross validation on it in the next section.
+Before exiting the script, save the model so we can run cross validation on it in another process.
 
 ```php
 $estimator->save();
 ```
 
 ### Cross Validation
-Cross validation is the process of testing a model using samples that the learner has never seen before. In addition to the training set, the CIFAR-10 dataset includes a 10,000 testing samples that we can use to score the model's generalization ability. We start by importing the testing samples located in the `test` folder.
+Cross validation is the process of testing a model using samples that the learner has never seen before. The goal is to be able to detect problems such as selection bias or overfitting. In addition to the training set, the CIFAR-10 dataset includes 10,000 testing samples that we'll use to score the model's generalization ability. We start by importing the testing samples and labels located in the `test` folder.
 
 ```php
 $samples = $labels = [];
 
-foreach (glob(__DIR__ . '/test/*.png') as $file) {
+foreach (glob('test/*.png') as $file) {
     $samples[] = [imagecreatefrompng($file)];
     $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
 }
@@ -160,8 +160,14 @@ $results = $report->generate($predictions, $dataset->labels());
 
 Now, take a look at the reports and see how the model performed.
 
+### Wrap Up
+- The CIFAR-10 dataset is a famous dataset used to benchmark the performance of computer vision tasks.
+- Computer vision allows a program to recognize and distinguish objects in images.
+- The problem of computer vision can be solved with Deep Learning by allowing a learner to build feature representations from raw data.
+- The [Multi Layer Perceptron](https://docs.rubixml.com/en/latest/classifiers/multi-layer-perceptron.html) classifier in Rubix ML is a type of deep learning model that uses hidden layers as intermediate computational units.
+
 ### Next Steps
-Experiment with other network architectures, activation functions, and learning rates. Try adding additional hidden layers to *deepen* the network and add flexibility to the model. Are there better network architectures that maintain spatial information?
+Congratulations on finishing the CIFAR-10 tutorial using Rubix ML! Now is your chance to experiment with other network architectures, activation functions, and learning rates on your own. Try adding additional hidden layers to *deepen* the network and add flexibility to the model. Is a fully-connected network the best architecture for this problem? Are there better network architectures that maintain spatial information?
 
 ## Original Dataset
 Creator: Alex Krizhevsky

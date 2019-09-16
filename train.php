@@ -20,18 +20,11 @@ use League\Csv\Writer;
 
 ini_set('memory_limit', '-1');
 
-echo '╔═════════════════════════════════════════════════════╗' . PHP_EOL;
-echo '║                                                     ║' . PHP_EOL;
-echo '║ CIFAR-10 Image Recognizer w/ Multi Layer Perceptron ║' . PHP_EOL;
-echo '║                                                     ║' . PHP_EOL;
-echo '╚═════════════════════════════════════════════════════╝' . PHP_EOL;
-echo PHP_EOL;
-
 echo 'Loading data into memory ...' . PHP_EOL;
 
 $samples = $labels = [];
 
-foreach (glob(__DIR__ . '/train/*.png') as $file) {
+foreach (glob('train/*.png') as $file) {
     $samples[] = [imagecreatefrompng($file)];
     $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
 }
@@ -49,7 +42,7 @@ $estimator = new PersistentModel(
         new Dense(200),
         new BatchNorm(),
         new Activation(new ELU()),
-        new Dense(100),
+        new Dense(200),
         new Activation(new ELU()),
         new Dense(100),
         new BatchNorm(),
