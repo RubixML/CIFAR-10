@@ -18,6 +18,8 @@ use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use League\Csv\Writer;
 
+use function Rubix\ML\array_transpose;
+
 ini_set('memory_limit', '-1');
 
 echo 'Loading data into memory ...' . PHP_EOL;
@@ -62,7 +64,7 @@ $losses = $estimator->steps();
 
 $writer = Writer::createFromPath('progress.csv', 'w+');
 $writer->insertOne(['score', 'loss']);
-$writer->insertAll(array_map(null, $scores, $losses));
+$writer->insertAll(array_transpose([$scores, $losses]));
 
 echo 'Progress saved to progress.csv' . PHP_EOL;
 
