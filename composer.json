@@ -1,12 +1,13 @@
 {
     "name": "rubix/cifar-10",
     "type": "project",
-    "description": "CIFAR-10 Image Classifier using a fully connected multi layer neural network.",
+    "description": "Use the famous CIFAR-10 dataset to train a multi-layer neural network to recognize images of cats, dogs, and other things.",
     "homepage": "https://github.com/RubixML/CIFAR10",
     "license": "MIT",
     "keywords": [
         "machine", "learning", "data", "science", "mining", "predictive", "modeling",
-        "ai", "classification", "neural", "net", "cifar-10", "image-recognition"
+        "ai", "classification", "neural-network", "cifar-10", "image-recognition",
+        "image-recognition"
     ],
     "authors": [
         {

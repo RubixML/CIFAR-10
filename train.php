@@ -2,11 +2,9 @@
 
 include __DIR__ . '/vendor/autoload.php';
 
-use Rubix\ML\Pipeline;
-use Rubix\ML\PersistentModel;
 use Rubix\ML\Datasets\Labeled;
-use Rubix\ML\Other\Loggers\Screen;
-use Rubix\ML\Persisters\Filesystem;
+use Rubix\ML\PersistentModel;
+use Rubix\ML\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
@@ -16,6 +14,8 @@ use Rubix\ML\NeuralNet\Layers\Activation;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
 use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
+use Rubix\ML\Persisters\Filesystem;
+use Rubix\ML\Other\Loggers\Screen;
 use League\Csv\Writer;
 
 use function Rubix\ML\array_transpose;
@@ -44,7 +44,7 @@ $estimator = new PersistentModel(
         new Dense(200),
         new BatchNorm(),
         new Activation(new ELU()),
-        new Dense(200),
+        new Dense(150),
         new Activation(new ELU()),
         new Dense(100),
         new BatchNorm(),
@@ -56,6 +56,8 @@ $estimator = new PersistentModel(
 );
 
 $estimator->setLogger(new Screen('CIFAR10'));
+
+echo 'Training ...' . PHP_EOL;
 
 $estimator->train($dataset);
 
