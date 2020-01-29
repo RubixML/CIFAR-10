@@ -41,17 +41,17 @@ $estimator = new PersistentModel(
     ], new MultiLayerPerceptron([
         new Dense(200),
         new Activation(new ELU()),
-        new Dense(200),
+        new Dense(200, false),
         new BatchNorm(),
         new Activation(new ELU()),
         new Dense(150),
         new Activation(new ELU()),
-        new Dense(100),
+        new Dense(100, false),
         new BatchNorm(),
         new Activation(new ELU()),
         new Dense(50),
         new Activation(new ELU()),
-    ], 100, new Adam(0.001))),
+    ], 200, new Adam(0.001))),
     new Filesystem('cifar-10.model', true)
 );
 
