@@ -60,7 +60,7 @@ use Rubix\ML\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
-use Rubix\ML\Classifiers\MultiLayerPerceptron;
+use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
@@ -73,15 +73,15 @@ $estimator = new PersistentModel(
         new ImageResizer(32, 32),
         new ImageVectorizer(),
         new ZScaleStandardizer(),
-    ], new MultiLayerPerceptron([
+    ], new MultilayerPerceptron([
         new Dense(200),
         new Activation(new ELU()),
-        new Dense(200),
+        new Dense(200, false),
         new BatchNorm(),
         new Activation(new ELU()),
         new Dense(150),
         new Activation(new ELU()),
-        new Dense(100),
+        new Dense(100, false),
         new BatchNorm(),
         new Activation(new ELU()),
         new Dense(50),
