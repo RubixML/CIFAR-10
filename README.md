@@ -50,7 +50,7 @@ $dataset = new Labeled($samples, $labels);
 The images we imported in the previous step will eventually need to be converted into samples of continuous features. An [Image Resizer](https://docs.rubixml.com/en/latest/transformers/image-resizer.html) ensures that all images have the same dimensionality, just in case. The [Image Vectorizer](https://docs.rubixml.com/en/latest/transformers/image-vectorizer.html) handles extracting the red, green, and blue (RGB) intensities (0 - 255) from the images. Finally, the [Z Scale Standardizer](https://docs.rubixml.com/en/latest/transformers/z-scale-standardizer.html) scales and centers the vectorized color channel data to a mean of 0 and a standard deviation of 1. This last step helps the network converge quicker. We'll wrap the 3 transformers in a [Pipeline](https://docs.rubixml.com/en/latest/pipeline.html) so we can use them again in another process after we save the model.
 
 ### Instantiating the Learner
-The [Multilayer Perceptron](https://docs.rubixml.com/en/latest/classifiers/multilayer-perceptron.html) classifier is a type of deep learning model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to train the network by gradually updating the signal that each neuron produces in response to an input. In between [Dense](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/dense.html) neuronal layers we have an [Activation](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/activation.html) layer that performs a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation functions are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [ELU](https://docs.rubixml.com/en/latest/neural-network/activation-functions/elu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. Lastly, we'll add [Batch Norm](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/batch-norm.html) layers after every two Dense hidden layers to help the network train faster by normalizing the activations as well as improve its generalization ability through the introduction of mild stochastic noise.
+The [Multilayer Perceptron](https://docs.rubixml.com/en/latest/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [ELU](https://docs.rubixml.com/en/latest/neural-network/activation-functions/elu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. A mild [Dropout](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/dropout.html) layer is added after the first two sets of Dense/Activation layers to act as a regularizer. Lastly, we'll add a [Batch Norm](https://docs.rubixml.com/en/latest/neural-network/hidden-layers/batch-norm.html) layer to help the network train faster by re-normalizing the activations partway through the network.
 
 Wrapping the learner and transformer pipeline in a [Persistent Model](https://docs.rubixml.com/en/latest/persistent-model.html) meta-estimator allows us to save the model so we can use it in another process to make predictions.
 
@@ -63,6 +63,7 @@ use Rubix\ML\Transformers\ZScaleStandardizer;
 use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
+use Rubix\ML\NeuralNet\Layers\Dropout;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
 use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
@@ -76,22 +77,23 @@ $estimator = new PersistentModel(
     ], new MultilayerPerceptron([
         new Dense(200),
         new Activation(new ELU()),
-        new Dense(200, false),
-        new BatchNorm(),
+        new Dropout(0.2),
+        new Dense(200),
         new Activation(new ELU()),
-        new Dense(150),
-        new Activation(new ELU()),
+        new Dropout(0.2),
         new Dense(100, false),
         new BatchNorm(),
         new Activation(new ELU()),
+        new Dense(100),
+        new Activation(new ELU()),
         new Dense(50),
         new Activation(new ELU()),
-    ], 200, new Adam(0.001))),
+    ], 512, new Adam(0.001))),
     new Filesystem('cifar-10.model', true)
 );
 ```
 
-There are a few more hyper-parameters of the MLP that we'll need to set in addition to the hidden layers. The *batch size* parameter is the number of samples that will be sent through the neural network at a time. We'll set this to 200. Next, the Gradient Descent optimizer and *learning rate*, which control the update step of the learning algorithm, will be set to [Adam](https://docs.rubixml.com/en/latest/neural-network/optimizers/adam.html) and `0.001` respectively. Feel free to experiment with these settings on your own.
+There are a few more hyper-parameters of the MLP that we'll need to set in addition to the hidden layers. The *batch size* parameter is the number of samples that will be sent through the neural network at a time. We'll set this to 512. Next, the Gradient Descent optimizer and *learning rate*, which control the update step of the learning algorithm, will be set to [Adam](https://docs.rubixml.com/en/latest/neural-network/optimizers/adam.html) and `0.001` respectively. Feel free to experiment with these settings on your own.
 
 ### Training
 Now, pass the training dataset to the `train()` method to begin training the network.

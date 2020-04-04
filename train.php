@@ -11,6 +11,7 @@ use Rubix\ML\Transformers\ZScaleStandardizer;
 use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
+use Rubix\ML\NeuralNet\Layers\Dropout;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
 use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
@@ -41,17 +42,18 @@ $estimator = new PersistentModel(
     ], new MultilayerPerceptron([
         new Dense(200),
         new Activation(new ELU()),
-        new Dense(200, false),
-        new BatchNorm(),
+        new Dropout(0.2),
+        new Dense(200),
         new Activation(new ELU()),
-        new Dense(150),
-        new Activation(new ELU()),
+        new Dropout(0.2),
         new Dense(100, false),
         new BatchNorm(),
         new Activation(new ELU()),
+        new Dense(100),
+        new Activation(new ELU()),
         new Dense(50),
         new Activation(new ELU()),
-    ], 200, new Adam(0.001))),
+    ], 512, new Adam(0.001))),
     new Filesystem('cifar-10.model', true)
 );
 
