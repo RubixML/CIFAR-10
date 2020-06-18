@@ -21,6 +21,7 @@
     ],
     "require": {
         "php": ">=7.2",
+        "ext-gd": "*",
         "league/csv": "^9.5",
         "rubix/ml": "0.1.0-rc3"
     },
