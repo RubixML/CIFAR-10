@@ -3,11 +3,13 @@
     "type": "project",
     "description": "Use the famous CIFAR-10 dataset to train a multi-layer neural network to recognize images of cats, dogs, and other things.",
     "homepage": "https://github.com/RubixML/CIFAR10",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "keywords": [
-        "machine", "learning", "data", "science", "mining", "predictive", "modeling",
-        "ai", "classification", "neural-network", "cifar-10", "image-recognition",
-        "image-recognition"
+        "batch norm", "cifar 10", "cifar-10", "classification", "cross validation", "dataset",
+        "data science", "dropout", "elu", "example project", "exponential linear unit",
+        "feed forward", "image recognition", "image classification", "machine learning", "ml",
+        "multilayer perceptron", "neural network", "php", "php ml", "rubix ml", "rubixml",
+        "tutorial"
     ],
     "authors": [
         {

@@ -3,7 +3,13 @@ CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dat
 
 - **Difficulty:** Hard
 - **Training time:** Hours
-- **Memory needed:** 10G
+
+## Requirements
+- [PHP](https://php.net) 7.2 or above
+
+#### Recommended
+- [Tensor extension](https://github.com/RubixML/Tensor) for faster training and inference
+- 10G of system memory or more
 
 ## Installation
 Clone the project locally with [Git](https://git-scm.com/):
@@ -17,9 +23,6 @@ Install project dependencies with [Composer](http://getcomposer.org/):
 ```sh
 $ composer install
 ```
-
-## Requirements
-- [PHP](https://php.net) 7.2 or above
 
 ## Tutorial
 
@@ -231,3 +234,6 @@ Email: akrizhevsky '@' gmail.com
 
 ### References
 >- [1] A. Krizhevsky. (2009). Learning Multiple Layers of Features from Tiny Images.
+
+## License
+The code is licensed [Apache 2.0](LICENSE.md) and the tutorial is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
