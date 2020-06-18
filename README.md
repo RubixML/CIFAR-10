@@ -4,25 +4,20 @@ CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dat
 - **Difficulty:** Hard
 - **Training time:** Hours
 
+## Installation
+Clone the project locally using [Composer](https://getcomposer.org/):
+```sh
+$ composer create-project rubix/cifar-10
+```
+
+> **Note:** Installation may take longer than usual due to the large dataset.
+
 ## Requirements
 - [PHP](https://php.net) 7.2 or above
 
 #### Recommended
 - [Tensor extension](https://github.com/RubixML/Tensor) for faster training and inference
 - 10G of system memory or more
-
-## Installation
-Clone the project locally with [Git](https://git-scm.com/):
-```sh
-$ git clone https://github.com/RubixML/CIFAR-10
-```
-
-> **Note:** Cloning may take longer than usual because of the large dataset.
-
-Install project dependencies with [Composer](http://getcomposer.org/):
-```sh
-$ composer install
-```
 
 ## Tutorial
 
@@ -129,6 +124,11 @@ Before exiting the script, save the model so we can run cross validation on it i
 $estimator->save();
 ```
 
+Now we're ready to execute the training script from the command line.
+```sh
+$ php train.php
+```
+
 ### Cross Validation
 Cross validation is the process of testing a model using samples that the learner has never seen before. The goal is to be able to detect problems such as selection bias or overfitting. In addition to the training set, the CIFAR-10 dataset includes 10,000 testing samples that we'll use to score the model's generalization ability. We start by importing the testing samples and labels located in the `test` folder using the technique from earlier.
 
@@ -180,6 +180,11 @@ $report = new AggregateReport([
 ]);
 
 $results = $report->generate($predictions, $dataset->labels());
+```
+
+To run the validation script, enter the following command at the command prompt.
+```php
+$ php validate.php
 ```
 
 Take a look at the results to see how the model performed on inference. Below is an excerpt of a multiclass breakdown report showing the overall performance. As you can see, the model does a fair job at recognizing the objects in the images, however there is room for improvement.
