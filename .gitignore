@@ -2,8 +2,6 @@
 composer.lock
 progress.csv
 report.json
-predictions.json
-probabilities.json
 *.model
 *.old
 .vscode

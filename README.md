@@ -6,6 +6,7 @@ CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dat
 
 ## Requirements
 - [PHP](https://php.net) 7.2 or above
+- [GD extension](https://www.php.net/manual/en/book.image.php)
 
 #### Recommended
 - [Tensor extension](https://github.com/RubixML/Tensor) for faster training and inference
