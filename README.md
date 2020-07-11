@@ -242,4 +242,4 @@ Email: akrizhevsky '@' gmail.com
 >- [1] A. Krizhevsky. (2009). Learning Multiple Layers of Features from Tiny Images.
 
 ## License
-The code is licensed [Apache 2.0](LICENSE.md) and the tutorial is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
+The code is licensed [MIT](LICENSE.md) and the tutorial is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
