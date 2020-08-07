@@ -17,7 +17,7 @@ use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\Other\Loggers\Screen;
-use League\Csv\Writer;
+use Rubix\ML\Datasets\Unlabeled;
 
 use function Rubix\ML\array_transpose;
 
@@ -57,7 +57,7 @@ $estimator = new PersistentModel(
     new Filesystem('cifar-10.model', true)
 );
 
-$estimator->setLogger(new Screen('CIFAR10'));
+$estimator->setLogger(new Screen());
 
 echo 'Training ...' . PHP_EOL;
 
@@ -66,9 +66,9 @@ $estimator->train($dataset);
 $scores = $estimator->scores();
 $losses = $estimator->steps();
 
-$writer = Writer::createFromPath('progress.csv', 'w+');
-$writer->insertOne(['score', 'loss']);
-$writer->insertAll(array_transpose([$scores, $losses]));
+Unlabeled::build(array_transpose([$scores, $losses]))
+    ->toCSV(['scores', 'losses'])
+    ->write('progress.csv');
 
 echo 'Progress saved to progress.csv' . PHP_EOL;
 
