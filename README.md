@@ -114,9 +114,9 @@ $scores = $estimator->scores();
 
 Then, we can plot the values using our favorite plotting software such as [Tableu](https://public.tableau.com/en-us/s/) or [Excel](https://products.office.com/en-us/excel-a). If all goes well, the value of the loss should go down as the value of the validation score goes up. Due to snapshotting, the epoch at which the validation score is highest and the loss is lowest is the point at which the values of the network parameters are taken.
 
-![Cross Entropy Loss](https://raw.githubusercontent.com/RubixML/CIFAR-10/master/docs/images/training-loss.svg?sanitize=true)
+![Cross Entropy Loss](https://raw.githubusercontent.com/RubixML/CIFAR-10/master/docs/images/training-losses.png)
 
-![F1 Score](https://raw.githubusercontent.com/RubixML/CIFAR-10/master/docs/images/validation-score.svg?sanitize=true)
+![F1 Score](https://raw.githubusercontent.com/RubixML/CIFAR-10/master/docs/images/validation-scores.png)
 
 ### Saving
 Before exiting the script, save the model so we can run cross validation on it in another process.
@@ -242,4 +242,4 @@ Email: akrizhevsky '@' gmail.com
 >- [1] A. Krizhevsky. (2009). Learning Multiple Layers of Features from Tiny Images.
 
 ## License
-The code is licensed [MIT](LICENSE.md) and the tutorial is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
+The code is licensed [MIT](LICENSE) and the tutorial is licensed [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
