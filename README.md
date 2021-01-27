@@ -37,7 +37,7 @@ foreach (glob('train/*.png') as $file) {
 }
 ```
 
-Now, load the extracted samples and labels into a [Labeled](https://docs.rubixml.com/datasets/labeled.html) dataset object.
+Now, load the extracted samples and labels into a [Labeled](https://docs.rubixml.com/latest/datasets/labeled.html) dataset object.
 
 ```php
 use Rubix\ML\Datasets\Labeled;
@@ -46,12 +46,12 @@ $dataset = new Labeled($samples, $labels);
 ```
 
 ### Dataset Preparation
-The images we imported in the previous step will eventually need to be converted into samples of continuous features. An [Image Resizer](https://docs.rubixml.com/transformers/image-resizer.html) ensures that all images have the same dimensionality, just in case. The [Image Vectorizer](https://docs.rubixml.com/transformers/image-vectorizer.html) handles extracting the red, green, and blue (RGB) intensities (0 - 255) from the images. Finally, the [Z Scale Standardizer](https://docs.rubixml.com/transformers/z-scale-standardizer.html) scales and centers the vectorized color channel data to a mean of 0 and a standard deviation of 1. This last step helps the network converge quicker. We'll wrap the 3 transformers in a [Pipeline](https://docs.rubixml.com/pipeline.html) so we can use them again in another process after we save the model.
+The images we imported in the previous step will eventually need to be converted into samples of continuous features. An [Image Resizer](https://docs.rubixml.com/latest/transformers/image-resizer.html) ensures that all images have the same dimensionality, just in case. The [Image Vectorizer](https://docs.rubixml.com/latest/transformers/image-vectorizer.html) handles extracting the red, green, and blue (RGB) intensities (0 - 255) from the images. Finally, the [Z Scale Standardizer](https://docs.rubixml.com/latest/transformers/z-scale-standardizer.html) scales and centers the vectorized color channel data to a mean of 0 and a standard deviation of 1. This last step helps the network converge quicker. We'll wrap the 3 transformers in a [Pipeline](https://docs.rubixml.com/latest/pipeline.html) so we can use them again in another process after we save the model.
 
 ### Instantiating the Learner
-The [Multilayer Perceptron](https://docs.rubixml.com/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://docs.rubixml.com/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://docs.rubixml.com/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [ELU](https://docs.rubixml.com/neural-network/activation-functions/elu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. A [Dropout](https://docs.rubixml.com/neural-network/hidden-layers/dropout.html) layer is added after the first two sets of Dense/Activation layers to act as a regularizer. Lastly, we'll add a [Batch Norm](https://docs.rubixml.com/neural-network/hidden-layers/batch-norm.html) layer to help the network train faster by re-normalizing the activations partway through the network.
+The [Multilayer Perceptron](https://docs.rubixml.com/latest/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://docs.rubixml.com/latest/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://docs.rubixml.com/latest/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [ELU](https://docs.rubixml.com/latest/neural-network/activation-functions/elu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. A [Dropout](https://docs.rubixml.com/latest/neural-network/hidden-layers/dropout.html) layer is added after the first two sets of Dense/Activation layers to act as a regularizer. Lastly, we'll add a [Batch Norm](https://docs.rubixml.com/latest/neural-network/hidden-layers/batch-norm.html) layer to help the network train faster by re-normalizing the activations partway through the network.
 
-Wrapping the learner and transformer pipeline in a [Persistent Model](https://docs.rubixml.com/persistent-model.html) meta-estimator allows us to save the model so we can use it in another process to make predictions.
+Wrapping the learner and transformer pipeline in a [Persistent Model](https://docs.rubixml.com/latest/persistent-model.html) meta-estimator allows us to save the model so we can use it in another process to make predictions.
 
 ```php
 use Rubix\ML\PersistentModel;
@@ -92,7 +92,7 @@ $estimator = new PersistentModel(
 );
 ```
 
-There are a few more hyper-parameters of the MLP that we'll need to set in addition to the hidden layers. The *batch size* parameter is the number of samples that will be sent through the neural network at a time. We'll set this to 512. Next, the Gradient Descent optimizer and *learning rate*, which control the update step of the learning algorithm, will be set to [Adam](https://docs.rubixml.com/neural-network/optimizers/adam.html) and `0.001` respectively. Feel free to experiment with these settings on your own.
+There are a few more hyper-parameters of the MLP that we'll need to set in addition to the hidden layers. The *batch size* parameter is the number of samples that will be sent through the neural network at a time. We'll set this to 512. Next, the Gradient Descent optimizer and *learning rate*, which control the update step of the learning algorithm, will be set to [Adam](https://docs.rubixml.com/latest/neural-network/optimizers/adam.html) and `0.001` respectively. Feel free to experiment with these settings on your own.
 
 ### Training
 Now, pass the training dataset to the `train()` method to begin training the network.
@@ -102,7 +102,7 @@ $estimator->train($dataset);
 ```
 
 ### Validation Score and Loss
-We can visualize the training progress at each stage by dumping the values of the loss function and validation metric after training. The `steps()` method will output an array containing the values of the default [Cross Entropy](https://docs.rubixml.com/neural-network/cost-functions/cross-entropy.html) cost function and the `scores()` method will return an array of scores from the default [F Beta](https://docs.rubixml.com/cross-validation/metrics/f-beta.html) validation metric.
+We can visualize the training progress at each stage by dumping the values of the loss function and validation metric after training. The `steps()` method will output an array containing the values of the default [Cross Entropy](https://docs.rubixml.com/latest/neural-network/cost-functions/cross-entropy.html) cost function and the `scores()` method will return an array of scores from the default [F Beta](https://docs.rubixml.com/latest/cross-validation/metrics/f-beta.html) validation metric.
 
 > **Note:** You can change the cost function and validation metric by setting them as hyper-parameters of the learner.
 
@@ -142,7 +142,7 @@ foreach (glob('test/*.png') as $file) {
 }
 ```
 
-Instantiate a [Labeled](https://docs.rubixml.com/datasets/labeled.html) dataset object with the testing samples and labels.
+Instantiate a [Labeled](https://docs.rubixml.com/latest/datasets/labeled.html) dataset object with the testing samples and labels.
 
 ```php
 use Rubix\ML\Datasets\Labeled;
@@ -151,7 +151,7 @@ $dataset = new Labeled($samples, $labels);
 ```
 
 ### Load Model from Storage
-Since we saved our model after training in the last section, we can load it whenever we need to use it in another process. The static `load()` method on the Persistent Model class takes a pre-configured [Persister](https://docs.rubixml.com/persisters/api.html) object pointing to the location of the model in storage as its only argument and returns the wrapped estimator in the last known saved state.
+Since we saved our model after training in the last section, we can load it whenever we need to use it in another process. The static `load()` method on the Persistent Model class takes a pre-configured [Persister](https://docs.rubixml.com/latest/persisters/api.html) object pointing to the location of the model in storage as its only argument and returns the wrapped estimator in the last known saved state.
 
 ```php
 use Rubix\ML\PersistentModel;
@@ -168,7 +168,7 @@ $predictions = $estimator->predict($dataset);
 ```
 
 ### Generate Reports
-The [Multiclass Breakdown](https://docs.rubixml.com/cross-validation/reports/multiclass-breakdown.html) and [Confusion Matrix](https://docs.rubixml.com/cross-validation/reports/confusion-matrix.html) are cross validation reports that show performance of the model on a class by class basis. We'll wrap them both in an Aggregate Report and pass our predictions along with the ground-truth labels from the testing set to the `generate()` method to generate both reports at once.
+The [Multiclass Breakdown](https://docs.rubixml.com/latest/cross-validation/reports/multiclass-breakdown.html) and [Confusion Matrix](https://docs.rubixml.com/latest/cross-validation/reports/confusion-matrix.html) are cross validation reports that show performance of the model on a class by class basis. We'll wrap them both in an Aggregate Report and pass our predictions along with the ground-truth labels from the testing set to the `generate()` method to generate both reports at once.
 
 ```php
 use Rubix\ML\CrossValidation\Reports\AggregateReport;
