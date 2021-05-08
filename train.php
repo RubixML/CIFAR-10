@@ -2,7 +2,7 @@
 
 include __DIR__ . '/vendor/autoload.php';
 
-use Rubix\ML\Other\Loggers\Screen;
+use Rubix\ML\Loggers\Screen;
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\PersistentModel;
 use Rubix\ML\Pipeline;
@@ -17,9 +17,7 @@ use Rubix\ML\NeuralNet\Layers\BatchNorm;
 use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\Persisters\Filesystem;
-use Rubix\ML\Datasets\Unlabeled;
-
-use function Rubix\ML\array_transpose;
+use Rubix\ML\Extractors\CSV;
 
 ini_set('memory_limit', '-1');
 
@@ -56,19 +54,16 @@ $estimator = new PersistentModel(
         new Dense(50),
         new Activation(new ELU()),
     ], 256, new Adam(0.0005))),
-    new Filesystem('cifar-10.model', true)
+    new Filesystem('cifar10.rbx', true)
 );
 
 $estimator->setLogger($logger);
 
 $estimator->train($dataset);
 
-$scores = $estimator->scores();
-$losses = $estimator->steps();
+$extractor = new CSV('progress.csv', true);
 
-Unlabeled::build(array_transpose([$scores, $losses]))
-    ->toCSV(['scores', 'losses'])
-    ->write('progress.csv');
+$extractor->export($estimator->steps());
 
 $logger->info('Progress saved to progress.csv');
 

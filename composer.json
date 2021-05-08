@@ -19,9 +19,9 @@
         }
     ],
     "require": {
-        "php": ">=7.2",
+        "php": ">=7.4",
         "ext-gd": "*",
-        "rubix/ml": "^0.3.0"
+        "rubix/ml": "^1.0"
     },
     "scripts": {
         "train": "@php train.php",

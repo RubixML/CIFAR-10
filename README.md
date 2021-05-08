@@ -13,7 +13,7 @@ $ composer create-project rubix/cifar-10
 > **Note:** Installation may take longer than usual due to the large dataset.
 
 ## Requirements
-- [PHP](https://php.net) 7.2 or above
+- [PHP](https://php.net) 7.4 or above
 - [GD extension](https://www.php.net/manual/en/book.image.php)
 
 #### Recommended
@@ -88,7 +88,7 @@ $estimator = new PersistentModel(
         new Dense(50),
         new Activation(new ELU()),
     ], 256, new Adam(0.0005))),
-    new Filesystem('cifar-10.model', true)
+    new Filesystem('cifar10.rbx', true)
 );
 ```
 
@@ -102,14 +102,16 @@ $estimator->train($dataset);
 ```
 
 ### Validation Score and Loss
-We can visualize the training progress at each stage by dumping the values of the loss function and validation metric after training. The `steps()` method will output an array containing the values of the default [Cross Entropy](https://docs.rubixml.com/latest/neural-network/cost-functions/cross-entropy.html) cost function and the `scores()` method will return an array of scores from the default [F Beta](https://docs.rubixml.com/latest/cross-validation/metrics/f-beta.html) validation metric.
+We can visualize the training progress at each stage by dumping the values of the loss function and validation metric after training. The `steps()` method will output an iterator containing the loss values of the default [Cross Entropy](https://docs.rubixml.com/latest/neural-network/cost-functions/cross-entropy.html) cost function and validation scores from the default [F Beta](https://docs.rubixml.com/latest/cross-validation/metrics/f-beta.html) metric.
 
 > **Note:** You can change the cost function and validation metric by setting them as hyper-parameters of the learner.
 
 ```php
-$steps = $estimator->steps();
+use Rubix\ML\Extractors\CSV;
 
-$scores = $estimator->scores();
+$extractor = new CSV('progress.csv', true);
+
+$extractor->export($estimator->steps());
 ```
 
 Then, we can plot the values using our favorite plotting software such as [Tableu](https://public.tableau.com/en-us/s/) or [Excel](https://products.office.com/en-us/excel-a). If all goes well, the value of the loss should go down as the value of the validation score goes up. Due to snapshotting, the epoch at which the validation score is highest and the loss is lowest is the point at which the values of the network parameters are taken.
@@ -157,7 +159,7 @@ Since we saved our model after training in the last section, we can load it when
 use Rubix\ML\PersistentModel;
 use Rubix\ML\Persisters\Filesystem;
 
-$estimator = PersistentModel::load(new Filesystem('cifar-10.model'));
+$estimator = PersistentModel::load(new Filesystem('cifar10.rbx'));
 ```
 
 ### Make Predictions
