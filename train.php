@@ -63,7 +63,9 @@ $estimator = new PersistentModel(
 
 $estimator->setLogger($logger);
 
-foreach (enumerate(array_chunk($files, $chunkSize), 1) as $i => $files) {
+$chunks = array_chunk($files, $chunkSize);
+
+foreach (enumerate($chunks, 1) as $i => $files) {
     $logger->info("Processing chunk #{$i}");
 
     $samples = $labels = [];
@@ -79,7 +81,7 @@ foreach (enumerate(array_chunk($files, $chunkSize), 1) as $i => $files) {
 
     $extractor = new CSV("progress_{$i}.csv", true);
 
-    $extractor->export($estimator->steps());
+    $extractor->export($estimator->progress());
 
     $logger->info("Progress saved to progress_{$i}.csv");
 }
