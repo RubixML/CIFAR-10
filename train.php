@@ -27,7 +27,7 @@ ini_set('memory_limit', '-1');
 $logger = new Screen();
 
 $files = glob('train/*.png');
-$chunkSize = 8192;
+$chunkSize = 10000;
 
 $estimator = new PersistentModel(
     new Pipeline([
@@ -65,8 +65,8 @@ $estimator->setLogger($logger);
 
 $chunks = array_chunk($files, $chunkSize);
 
-foreach (enumerate($chunks, 1) as $i => $files) {
-    $logger->info("Processing chunk #{$i}");
+foreach (enumerate($chunks, start: 1) as $i => $files) {
+    $logger->info("Training on chunk #{$i}");
 
     $samples = $labels = [];
 
@@ -81,7 +81,7 @@ foreach (enumerate($chunks, 1) as $i => $files) {
 
     $extractor = new CSV("progress_{$i}.csv", true);
 
-    $extractor->export($estimator->progress());
+    $extractor->export($estimator->progress(), overwrite: true);
 
     $logger->info("Progress saved to progress_{$i}.csv");
 }
