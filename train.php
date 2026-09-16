@@ -9,63 +9,80 @@ use Rubix\ML\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
+use Rubix\ML\Transformers\FloatTypeConverter;
 use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
-use Rubix\ML\NeuralNet\Layers\Dropout;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
-use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
+use Rubix\ML\NeuralNet\ActivationFunctions\GELU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
+use Rubix\ML\NeuralNet\Optimizers\Schedulers\Constant;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\Extractors\CSV;
+
+use function Rubix\ML\enumerate;
 
 ini_set('memory_limit', '-1');
 
 $logger = new Screen();
 
-$logger->info('Loading data into memory');
-
-$samples = $labels = [];
-
-foreach (glob('train/*.png') as $file) {
-    $samples[] = [imagecreatefrompng($file)];
-    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
-}
-
-$dataset = new Labeled($samples, $labels);
+$files = glob('train/*.png');
+$chunkSize = 8192;
 
 $estimator = new PersistentModel(
     new Pipeline([
         new ImageResizer(32, 32),
         new ImageVectorizer(),
+        new FloatTypeConverter(),
         new ZScaleStandardizer(),
-    ], new MultilayerPerceptron([
-        new Dense(200),
-        new Activation(new ELU()),
-        new Dropout(0.5),
-        new Dense(200),
-        new Activation(new ELU()),
-        new Dropout(0.5),
-        new Dense(100, 0.0, false),
-        new BatchNorm(),
-        new Activation(new ELU()),
-        new Dense(100),
-        new Activation(new ELU()),
-        new Dense(50),
-        new Activation(new ELU()),
-    ], 256, new Adam(0.0005))),
+    ], new MultilayerPerceptron(
+        hiddenLayers: [
+            new Dense(256),
+            new Activation(new GELU()),
+            new Dense(256, bias: false),
+            new BatchNorm(),
+            new Activation(new GELU()),
+            new Dense(256),
+            new Activation(new GELU()),
+            new Dense(128, bias: false),
+            new BatchNorm(),
+            new Activation(new GELU()),
+            new Dense(128),
+            new Activation(new GELU()),
+            new Dense(10),
+        ],
+        batchSize: 32,
+        gradientAccumulationSteps: 4,
+        optimizer: new Adam(new Constant(0.0001)),
+        maxGradientNorm: 1.0,
+        evalInterval: 1,
+        window: 10,
+    )),
     new Filesystem('cifar10.rbx', true)
 );
 
 $estimator->setLogger($logger);
 
-$estimator->train($dataset);
+foreach (enumerate(array_chunk($files, $chunkSize), 1) as $i => $files) {
+    $logger->info("Processing chunk #{$i}");
 
-$extractor = new CSV('progress.csv', true);
+    $samples = $labels = [];
 
-$extractor->export($estimator->steps());
+    foreach ($files as $file) {
+        $samples[] = [imagecreatefrompng($file)];
+        $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+    }
 
-$logger->info('Progress saved to progress.csv');
+    $subset = new Labeled($samples, $labels);
+
+    $estimator->partial($subset);
+
+    $extractor = new CSV("progress_{$i}.csv", true);
+
+    $extractor->export($estimator->steps());
+
+    $logger->info("Progress saved to progress_{$i}.csv");
+}
 
 if (strtolower(trim(readline('Save this model? (y|[n]): '))) === 'y') {
     $estimator->save();

@@ -1,6 +1,6 @@
 /vendor
 composer.lock
-progress.csv
+progress*.csv
 report.json
 *.rbx
 *.old
