@@ -2,6 +2,7 @@
 
 include __DIR__ . '/vendor/autoload.php';
 
+use Tensor\Settings;
 use Rubix\ML\Loggers\Screen;
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\PersistentModel;
@@ -14,7 +15,7 @@ use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
-use Rubix\ML\NeuralNet\ActivationFunctions\GELU;
+use Rubix\ML\NeuralNet\ActivationFunctions\SiLU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\NeuralNet\Optimizers\Schedulers\Constant;
 use Rubix\ML\Persisters\Filesystem;
@@ -23,6 +24,8 @@ use Rubix\ML\Extractors\CSV;
 use function Rubix\ML\enumerate;
 
 ini_set('memory_limit', '-1');
+
+Settings::setNumThreads(1);
 
 $logger = new Screen();
 
@@ -37,23 +40,23 @@ $estimator = new PersistentModel(
         new ZScaleStandardizer(),
     ], new MultilayerPerceptron(
         hiddenLayers: [
-            new Dense(256),
-            new Activation(new GELU()),
+            new Dense(512),
+            new Activation(new SiLU()),
+            new Dense(512, bias: false),
+            new BatchNorm(),
+            new Activation(new SiLU()),
+            new Dense(512),
+            new Activation(new SiLU()),
             new Dense(256, bias: false),
             new BatchNorm(),
-            new Activation(new GELU()),
-            new Dense(256),
-            new Activation(new GELU()),
-            new Dense(128, bias: false),
-            new BatchNorm(),
-            new Activation(new GELU()),
+            new Activation(new SiLU()),
             new Dense(128),
-            new Activation(new GELU()),
+            new Activation(new SiLU()),
             new Dense(10),
         ],
         batchSize: 32,
         gradientAccumulationSteps: 4,
-        optimizer: new Adam(new Constant(0.0001)),
+        optimizer: new Adam(new Constant(0.001)),
         maxGradientNorm: 1.0,
         evalInterval: 1,
         window: 10,
