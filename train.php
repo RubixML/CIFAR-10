@@ -25,12 +25,13 @@ use function Rubix\ML\enumerate;
 
 ini_set('memory_limit', '-1');
 
+define('CHUNK_SIZE', 10000);
+
 Settings::setNumThreads(1);
 
 $logger = new Screen();
 
 $files = glob('train/*.png');
-$chunkSize = 10000;
 
 $estimator = new PersistentModel(
     new Pipeline([
@@ -56,7 +57,7 @@ $estimator = new PersistentModel(
         ],
         batchSize: 32,
         gradientAccumulationSteps: 4,
-        optimizer: new Adam(new Constant(0.001)),
+        optimizer: new Adam(new Constant(0.0001)),
         maxGradientNorm: 1.0,
         evalInterval: 1,
         window: 10,
@@ -66,7 +67,18 @@ $estimator = new PersistentModel(
 
 $estimator->setLogger($logger);
 
-$chunks = array_chunk($files, $chunkSize);
+$samples = $labels = [];
+
+foreach (glob('test/*.png') as $file) {
+    $samples[] = [imagecreatefrompng($file)];
+    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+}
+
+$testing = new Labeled($samples, $labels);
+
+$estimator->setValidationDataset($testing);
+
+$chunks = array_chunk($files, CHUNK_SIZE);
 
 foreach (enumerate($chunks, start: 1) as $i => $files) {
     $logger->info("Training on chunk #{$i}");
@@ -78,9 +90,9 @@ foreach (enumerate($chunks, start: 1) as $i => $files) {
         $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
     }
 
-    $subset = new Labeled($samples, $labels);
+    $training = new Labeled($samples, $labels);
 
-    $estimator->partial($subset);
+    $estimator->partial($training);
 
     $extractor = new CSV("progress_{$i}.csv", true);
 

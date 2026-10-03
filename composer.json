@@ -21,7 +21,7 @@
     "require": {
         "php": ">=8.3",
         "ext-gd": "*",
-        "rubix/ml": "3.0.0-rc4"
+        "rubix/ml": "dev-master"
     },
     "scripts": {
         "train": "@php train.php",

@@ -60,7 +60,7 @@ The images we imported in the previous step will eventually need to be converted
 
 ### Instantiating the Learner
 
-The [Multilayer Perceptron](https://rubixml.github.io/ML/latest/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [GELU](https://rubixml.github.io/ML/latest/neural-network/activation-functions/gelu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. We also add a [Batch Norm](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/batch-norm.html) layer after the second and fourth sets of Dense/Activation layers to help the network train faster by re-normalizing the activations partway through the network.
+The [Multilayer Perceptron](https://rubixml.github.io/ML/latest/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [SiLU](https://rubixml.github.io/ML/latest/neural-network/activation-functions/silu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. We also add a [Batch Norm](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/batch-norm.html) layer after the second and fourth sets of Dense/Activation layers to help the network train faster by re-normalizing the activations partway through the network.
 
 Wrapping the learner and transformer pipeline in a [Persistent Model](https://rubixml.github.io/ML/latest/persistent-model.html) meta-estimator allows us to save the model so we can use it in another process to make predictions.
 
@@ -75,7 +75,7 @@ use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
-use Rubix\ML\NeuralNet\ActivationFunctions\GELU;
+use Rubix\ML\NeuralNet\ActivationFunctions\SiLU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\NeuralNet\Optimizers\Schedulers\Constant;
 use Rubix\ML\Persisters\Filesystem;
@@ -88,18 +88,18 @@ $estimator = new PersistentModel(
         new ZScaleStandardizer(),
     ], new MultilayerPerceptron(
         hiddenLayers: [
-            new Dense(256),
-            new Activation(new GELU()),
+            new Dense(512),
+            new Activation(new SiLU()),
+            new Dense(512, bias: false),
+            new BatchNorm(),
+            new Activation(new SiLU()),
+            new Dense(512),
+            new Activation(new SiLU()),
             new Dense(256, bias: false),
             new BatchNorm(),
-            new Activation(new GELU()),
-            new Dense(256),
-            new Activation(new GELU()),
-            new Dense(128, bias: false),
-            new BatchNorm(),
-            new Activation(new GELU()),
+            new Activation(new SiLU()),
             new Dense(128),
-            new Activation(new GELU()),
+            new Activation(new SiLU()),
             new Dense(10),
         ],
         batchSize: 32,
@@ -114,6 +114,27 @@ $estimator = new PersistentModel(
 ```
 
 There are a few more hyper-parameters of the MLP that we'll need to set in addition to the hidden layers. The *batch size* parameter is the number of samples that will be sent through the neural network at a time. We'll set this to 32. Because a small batch size can make the weight updates noisy, we accumulate the gradients over `4` batches before updating the weights using the *gradient accumulation* parameter, giving an effective batch size of 128. Next, the Gradient Descent optimizer and *learning rate*, which control the update step of the learning algorithm, will be set to [Adam](https://rubixml.github.io/ML/latest/neural-network/optimizers/adam.html) with a `Constant` learning rate of `0.0001`. To keep the gradients from becoming too large, we also cap the *max gradient norm* to `1.0`. Finally, the *eval interval* parameter controls how often the learner scores the model on a hold-out portion of the training set during training, and the *window* parameter specifies how many evaluations without an improvement in the validation score to wait before stopping early. Feel free to experiment with these settings on your own.
+
+### Setting a Validation Dataset
+
+The *eval interval* and *window* parameters we set earlier rely on a hold-out set to score the model during training. We point those evaluations at the test directory, which we haven't used for training yet, so that early stopping reflects how the network generalizes beyond the data it is learning. We import the test samples and labels the same way we will later in the Cross Validation section, then register the result with the learner using `setValidationDataset()`.
+
+```php
+use Rubix\ML\Datasets\Labeled;
+
+$samples = $labels = [];
+
+foreach (glob('test/*.png') as $file) {
+    $samples[] = [imagecreatefrompng($file)];
+    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+}
+
+$testing = new Labeled($samples, $labels);
+
+$estimator->setValidationDataset($testing);
+```
+
+From this point forward, the learner measures its validation score against this dataset at every *eval interval* and uses the *window* setting to decide when to stop training early.
 
 ### Training
 
@@ -146,7 +167,7 @@ We can visualize the training progress at each stage by dumping the values of th
 
 > **Note:** You can change the cost function and validation metric by setting them as hyper-parameters of the learner.
 
-After training on each chunk, we export the progress so far to a CSV file using the [CSV](https://rubixml.github.io/ML/latest/extractors/csv.html) extractor. With a chunk size of 8,192, training the 50,000 images in the training set produces 7 `progress_*.csv` files - one for every chunk in the dataset.
+After training on each chunk, we export the progress so far to a CSV file using the [CSV](https://rubixml.github.io/ML/latest/extractors/csv.html) extractor. With a chunk size of 10,000, training the 50,000 images in the training set produces 5 `progress_*.csv` files - one for every chunk in the dataset.
 
 ```php
 use Rubix\ML\Extractors\CSV;
