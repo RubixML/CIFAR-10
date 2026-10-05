@@ -2,11 +2,11 @@
 
 include __DIR__ . '/vendor/autoload.php';
 
-use Tensor\Settings;
 use Rubix\ML\Loggers\Screen;
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\PersistentModel;
-use Rubix\ML\Pipeline;
+use Rubix\ML\Transformers\PersistentTransformer;
+use Rubix\ML\Transformers\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
@@ -27,19 +27,20 @@ ini_set('memory_limit', '-1');
 
 define('CHUNK_SIZE', 10000);
 
-Settings::setNumThreads(1);
-
 $logger = new Screen();
 
-$files = glob('train/*.png');
-
-$estimator = new PersistentModel(
-    new Pipeline([
+$transformer = new PersistentTransformer(
+    base: new Pipeline([
         new ImageResizer(32, 32),
         new ImageVectorizer(),
         new FloatTypeConverter(),
         new ZScaleStandardizer(),
-    ], new MultilayerPerceptron(
+    ]),
+    persister: new Filesystem('transformer.rbx', true)
+);
+
+$estimator = new PersistentModel(
+    base: new MultilayerPerceptron(
         hiddenLayers: [
             new Dense(512),
             new Activation(new SiLU()),
@@ -60,9 +61,9 @@ $estimator = new PersistentModel(
         optimizer: new Adam(new Constant(0.0001)),
         maxGradientNorm: 1.0,
         evalInterval: 1,
-        window: 10,
-    )),
-    new Filesystem('cifar10.rbx', true)
+        window: 5,
+    ),
+    persister: new Filesystem('model.rbx', true)
 );
 
 $estimator->setLogger($logger);
@@ -76,7 +77,13 @@ foreach (glob('test/*.png') as $file) {
 
 $testing = new Labeled($samples, $labels);
 
+$transformer->fit($testing);
+
+$testing->apply($transformer);
+
 $estimator->setValidationDataset($testing);
+
+$files = glob('train/*.png');
 
 $chunks = array_chunk($files, CHUNK_SIZE);
 
@@ -92,6 +99,10 @@ foreach (enumerate($chunks, start: 1) as $i => $files) {
 
     $training = new Labeled($samples, $labels);
 
+    $transformer->update($training);
+
+    $training->apply($transformer);
+
     $estimator->partial($training);
 
     $extractor = new CSV("progress_{$i}.csv", true);
@@ -102,5 +113,6 @@ foreach (enumerate($chunks, start: 1) as $i => $files) {
 }
 
 if (strtolower(trim(readline('Save this model? (y|[n]): '))) === 'y') {
+    $transformer->save();
     $estimator->save();
 }
