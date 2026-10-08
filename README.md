@@ -96,6 +96,29 @@ $transformer = new PersistentTransformer(
 
 Note that the decorator behaves like the Pipeline it wraps everywhere else, so it can be handed straight to `Dataset::apply()`, which transforms the samples in place.
 
+### Data Augmentation
+
+A network trained on a fixed set of images can easily memorize them rather than learn generalizable features. To combat this, we define a second [Pipeline](https://rubixml.github.io/ML/latest/transformers/pipeline.html) that randomly perturbs each training image with horizontal flips and small shifts in brightness, contrast, and saturation. This *augments* the data by producing a slightly different but equivalent version of every image each time the network sees it.
+
+Unlike the transformer from the previous section, the augmenter is neither fitted nor persisted - it holds no state and is applied only to the training chunks during training, never to the validation or test sets.
+
+```php
+use Rubix\ML\Transformers\Pipeline;
+use Rubix\ML\Transformers\ImageFlipper;
+use Rubix\ML\Transformers\ColorJitter;
+
+$augmenter = new Pipeline([
+    new ImageFlipper(),
+    new ColorJitter(
+        brightness: 0.1,
+        contrast: 0.1,
+        saturation: 0.1
+    ),
+]);
+```
+
+We'll apply the augmenter to each chunk in the Training section below, before the color channel statistics are folded into the standardizer.
+
 ### Instantiating the Learner
 
 The [Multilayer Perceptron](https://rubixml.github.io/ML/latest/classifiers/multilayer-perceptron.html) classifier is a type of neural network model we'll train to recognize images in the CIFAR-10 dataset. Under the hood it uses Gradient Descent with Backpropagation to learn the weights of the network by gradually updating the signal that each neuron produces in response to an input. One of the key aspects of neural networks are the use of hidden layers that perform intermediate computations. In between [Dense](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/dense.html) neuronal layers we use an [Activation](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/activation.html) layer to perform a non-linear transformation of the neuron's output using a user-defined activation function. The non-linearities introduced by the activation layer are crucial for learning complex patterns within the data. For the purpose of this tutorial we'll use the [SiLU](https://rubixml.github.io/ML/latest/neural-network/activation-functions/silu.html) activation function, which is a good default but feel free to experiment with different activation functions on your own. We also add a [Batch Norm](https://rubixml.github.io/ML/latest/neural-network/hidden-layers/batch-norm.html) layer after the second and fourth sets of Dense/Activation layers to help the network train faster by re-normalizing the activations partway through the network.
@@ -183,54 +206,50 @@ From this point forward, the learner measures its validation score against this 
 
 Now we're ready to begin training the network. Instead of passing the entire training set to the `train()` method at once, we feed the learner one chunk of data at a time using `partial()`. Unlike `train()`, which initializes the learner from scratch, the `partial()` method continues training from the previous state, which makes it possible to train on datasets that are too large to fit into memory.
 
-Each chunk also contributes to the transformer's fitting. Calling `update()` on the transformer folds the chunk's color channel statistics into the running estimate before we transform with it, so the standardizer keeps getting more accurate as the network sees more data.
+Since a single pass over the chunks is a relatively small amount of work, we repeat the entire sequence `NUM_REPETITIONS` times - effectively training for 3 epochs - so the network has more opportunities to refine its weights.
+
+Each chunk also contributes to the transformer's fitting and is run through the augmenter first. Calling `update()` on the transformer folds the chunk's (augmented) color channel statistics into the running estimate, so the standardizer keeps getting more accurate as the network sees more data. Transforming with `apply()` afterwards ensures the learner always receives standardized features.
 
 ```php
+define('NUM_REPETITIONS', 3);
+
 $chunks = array_chunk($files, CHUNK_SIZE);
 
-foreach (enumerate($chunks, start: 1) as $i => $files) {
-    $logger->info("Training on chunk #{$i}");
+for ($i = 0; $i < NUM_REPETITIONS; $i++) {
+    foreach (enumerate($chunks, start: 1) as $j => $files) {
+        $logger->info("Training on chunk #{$j}");
 
-    $samples = $labels = [];
+        $samples = $labels = [];
 
-    foreach ($files as $file) {
-        $samples[] = [imagecreatefrompng($file)];
-        $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+        foreach ($files as $file) {
+            $samples[] = [imagecreatefrompng($file)];
+            $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+        }
+
+        $training = new Labeled($samples, $labels);
+
+        $training->apply($augmenter);
+
+        $transformer->update($training);
+
+        $training->apply($transformer);
+
+        $estimator->partial($training);
     }
-
-    $training = new Labeled($samples, $labels);
-
-    $transformer->update($training);
-
-    $training->apply($transformer);
-
-    $estimator->partial($training);
 }
 ```
 
-The `enumerate()` helper we imported earlier adds a 1-indexed counter to the chunk iterator so we can keep track of where we are in the training process.
+The `enumerate()` helper we imported earlier adds a 1-indexed counter to the chunk iterator so we can keep track of where we are within each repetition, while the outer `$i` loop counts how many times we've been through the entire training set.
 
 ### Validation Score and Loss
 
-We can visualize the training progress at each stage by dumping the values of the loss function and validation metric during training. The `progress()` method will output an iterator containing the loss values of the default [Cross Entropy](https://rubixml.github.io/ML/latest/neural-network/cost-functions/cross-entropy.html) cost function and validation scores from the default [F Beta](https://rubixml.github.io/ML/latest/cross-validation/metrics/f-beta.html) metric at each evaluated epoch.
+The [Screen](https://rubixml.github.io/ML/latest/loggers/screen.html) logger we attached earlier reports the loss of the default [Cross Entropy](https://rubixml.github.io/ML/latest/neural-network/cost-functions/cross-entropy.html) cost function and the validation score from the default [F Beta](https://rubixml.github.io/ML/latest/cross-validation/metrics/f-beta.html) metric every time the learner evaluates on the hold-out set - once per *eval interval*. Following that stream of numbers is the simplest way to watch the network converge in the terminal.
 
 > **Note:** You can change the cost function and validation metric by setting them as hyper-parameters of the learner.
 
-After training on each chunk, we export the progress so far to a CSV file using the [CSV](https://rubixml.github.io/ML/latest/extractors/csv.html) extractor. With a chunk size of 10,000, training the 50,000 images in the training set produces 5 `progress_*.csv` files - one for every chunk in the dataset.
+If you'd rather analyze the numbers yourself, the `progress()` method returns an iterator containing the loss and validation score at each evaluated epoch, which you can export to a file or plot with your favorite tool.
 
-```php
-use Rubix\ML\Extractors\CSV;
-
-$extractor = new CSV("progress_{$i}.csv", true);
-
-$extractor->export($estimator->progress(), overwrite: true);
-
-$logger->info("Progress saved to progress_{$i}.csv");
-```
-
-The `true` second argument tells the extractor to include a header row, and since each file is named after the chunk it came from, `overwrite: true` is just there so that re-running the script doesn't error out on a file that's already there.
-
-Then, we can plot the values using our favorite plotting software such as [Tableu](https://public.tableau.com/en-us/s/) or [Excel](https://products.office.com/en-us/excel-a). If all goes well, the value of the loss should go down as the value of the validation score goes up. Due to snapshotting, the epoch at which the validation score is highest and the loss is lowest is the point at which the values of the network parameters are taken.
+If all goes well, the value of the loss should go down as the value of the validation score goes up. Due to snapshotting, the epoch at which the validation score is highest and the loss is lowest is the point at which the values of the network parameters are taken. The plots below show these typical trends over the course of training.
 
 ![Cross Entropy Loss](https://raw.githubusercontent.com/RubixML/CIFAR-10/master/docs/images/training-losses.png)
 
