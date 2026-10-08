@@ -21,7 +21,6 @@ use Rubix\ML\NeuralNet\ActivationFunctions\SiLU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
 use Rubix\ML\NeuralNet\Optimizers\Schedulers\Constant;
 use Rubix\ML\Persisters\Filesystem;
-use Rubix\ML\Extractors\CSV;
 
 use function Rubix\ML\enumerate;
 
@@ -119,12 +118,6 @@ for ($i = 0; $i < NUM_REPETITIONS; $i++) {
         $training->apply($transformer);
 
         $estimator->partial($training);
-
-        $extractor = new CSV("progress_{$j}.csv", true);
-
-        $extractor->export($estimator->progress(), overwrite: true);
-
-        $logger->info("Progress saved to progress_{$j}.csv");
     }
 }
 
