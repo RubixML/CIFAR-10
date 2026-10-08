@@ -7,10 +7,24 @@ CIFAR-10 (short for *Canadian Institute For Advanced Research*) is a [famous dat
 Clone the project locally using [Composer](https://getcomposer.org/):
 
 ```sh
-$ composer create-project rubix/cifar-10
+composer create-project rubix/cifar-10
 ```
 
 > **Note:** Installation may take longer than usual due to the large dataset.
+
+### Optional for best performance
+
+Make sure you have all the necessary build tools installed such as a C compiler and make tools. For example, on an Ubuntu linux system you can enter the following on the command line to install the necessary dependencies.
+
+```sh
+sudo apt-get install make gcc gfortran php-dev libopenblas-dev liblapacke-dev re2c build-essential
+```
+
+Compile and install the [Tensor 4.1+](https://github.com/RubixML/Tensor-Ext) extension using PIE:
+
+```sh
+pie install rubix/tensor_ext:^4.1
+```
 
 ## Requirements
 
@@ -19,7 +33,7 @@ $ composer create-project rubix/cifar-10
 
 ### Recommended
 
-- [Tensor extension](https://github.com/RubixML/Tensor) for faster training and inference
+- [Tensor 4.1+ extension](https://github.com/RubixML/Tensor-Ext) for faster training and inference
 
 ## Tutorial
 
