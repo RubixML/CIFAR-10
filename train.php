@@ -8,6 +8,8 @@ use Rubix\ML\PersistentModel;
 use Rubix\ML\Transformers\PersistentTransformer;
 use Rubix\ML\Transformers\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
+use Rubix\ML\Transformers\ImageFlipper;
+use Rubix\ML\Transformers\ColorJitter;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
 use Rubix\ML\Transformers\FloatTypeConverter;
@@ -26,6 +28,7 @@ use function Rubix\ML\enumerate;
 ini_set('memory_limit', '-1');
 
 define('CHUNK_SIZE', 10000);
+define('NUM_REPETITIONS', 3);
 
 $logger = new Screen();
 
@@ -38,6 +41,15 @@ $transformer = new PersistentTransformer(
     ]),
     persister: new Filesystem('transformer.rbx', true)
 );
+
+$augmenter = new Pipeline([
+    new ImageFlipper(),
+    new ColorJitter(
+        brightness: 0.1,
+        contrast: 0.1,
+        saturation: 0.1
+    ),
+]);
 
 $estimator = new PersistentModel(
     base: new MultilayerPerceptron(
@@ -87,29 +99,33 @@ $files = glob('train/*.png');
 
 $chunks = array_chunk($files, CHUNK_SIZE);
 
-foreach (enumerate($chunks, start: 1) as $i => $files) {
-    $logger->info("Training on chunk #{$i}");
+for ($i = 0; $i < NUM_REPETITIONS; $i++) {
+    foreach (enumerate($chunks, start: 1) as $j => $files) {
+        $logger->info("Training on chunk #{$j}");
 
-    $samples = $labels = [];
+        $samples = $labels = [];
 
-    foreach ($files as $file) {
-        $samples[] = [imagecreatefrompng($file)];
-        $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+        foreach ($files as $file) {
+            $samples[] = [imagecreatefrompng($file)];
+            $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+        }
+
+        $training = new Labeled($samples, $labels);
+
+        $training->apply($augmenter);
+
+        $transformer->update($training);
+
+        $training->apply($transformer);
+
+        $estimator->partial($training);
+
+        $extractor = new CSV("progress_{$j}.csv", true);
+
+        $extractor->export($estimator->progress(), overwrite: true);
+
+        $logger->info("Progress saved to progress_{$j}.csv");
     }
-
-    $training = new Labeled($samples, $labels);
-
-    $transformer->update($training);
-
-    $training->apply($transformer);
-
-    $estimator->partial($training);
-
-    $extractor = new CSV("progress_{$i}.csv", true);
-
-    $extractor->export($estimator->progress(), overwrite: true);
-
-    $logger->info("Progress saved to progress_{$i}.csv");
 }
 
 if (strtolower(trim(readline('Save this model? (y|[n]): '))) === 'y') {
