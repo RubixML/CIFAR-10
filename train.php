@@ -5,68 +5,114 @@ include __DIR__ . '/vendor/autoload.php';
 use Rubix\ML\Loggers\Screen;
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\PersistentModel;
-use Rubix\ML\Pipeline;
+use Rubix\ML\Transformers\PersistentTransformer;
+use Rubix\ML\Transformers\Pipeline;
 use Rubix\ML\Transformers\ImageResizer;
 use Rubix\ML\Transformers\ImageVectorizer;
 use Rubix\ML\Transformers\ZScaleStandardizer;
+use Rubix\ML\Transformers\FloatTypeConverter;
 use Rubix\ML\Classifiers\MultilayerPerceptron;
 use Rubix\ML\NeuralNet\Layers\Dense;
 use Rubix\ML\NeuralNet\Layers\Activation;
-use Rubix\ML\NeuralNet\Layers\Dropout;
 use Rubix\ML\NeuralNet\Layers\BatchNorm;
-use Rubix\ML\NeuralNet\ActivationFunctions\ELU;
+use Rubix\ML\NeuralNet\ActivationFunctions\SiLU;
 use Rubix\ML\NeuralNet\Optimizers\Adam;
+use Rubix\ML\NeuralNet\Optimizers\Schedulers\Constant;
 use Rubix\ML\Persisters\Filesystem;
 use Rubix\ML\Extractors\CSV;
 
+use function Rubix\ML\enumerate;
+
 ini_set('memory_limit', '-1');
+
+define('CHUNK_SIZE', 10000);
 
 $logger = new Screen();
 
-$logger->info('Loading data into memory');
-
-$samples = $labels = [];
-
-foreach (glob('train/*.png') as $file) {
-    $samples[] = [imagecreatefrompng($file)];
-    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
-}
-
-$dataset = new Labeled($samples, $labels);
-
-$estimator = new PersistentModel(
-    new Pipeline([
+$transformer = new PersistentTransformer(
+    base: new Pipeline([
         new ImageResizer(32, 32),
         new ImageVectorizer(),
+        new FloatTypeConverter(),
         new ZScaleStandardizer(),
-    ], new MultilayerPerceptron([
-        new Dense(200),
-        new Activation(new ELU()),
-        new Dropout(0.5),
-        new Dense(200),
-        new Activation(new ELU()),
-        new Dropout(0.5),
-        new Dense(100, 0.0, false),
-        new BatchNorm(),
-        new Activation(new ELU()),
-        new Dense(100),
-        new Activation(new ELU()),
-        new Dense(50),
-        new Activation(new ELU()),
-    ], 256, new Adam(0.0005))),
-    new Filesystem('cifar10.rbx', true)
+    ]),
+    persister: new Filesystem('transformer.rbx', true)
+);
+
+$estimator = new PersistentModel(
+    base: new MultilayerPerceptron(
+        hiddenLayers: [
+            new Dense(512),
+            new Activation(new SiLU()),
+            new Dense(512, bias: false),
+            new BatchNorm(),
+            new Activation(new SiLU()),
+            new Dense(512),
+            new Activation(new SiLU()),
+            new Dense(256, bias: false),
+            new BatchNorm(),
+            new Activation(new SiLU()),
+            new Dense(128),
+            new Activation(new SiLU()),
+            new Dense(10),
+        ],
+        batchSize: 32,
+        gradientAccumulationSteps: 4,
+        optimizer: new Adam(new Constant(0.0001)),
+        maxGradientNorm: 1.0,
+        evalInterval: 1,
+        window: 5,
+    ),
+    persister: new Filesystem('model.rbx', true)
 );
 
 $estimator->setLogger($logger);
 
-$estimator->train($dataset);
+$samples = $labels = [];
 
-$extractor = new CSV('progress.csv', true);
+foreach (glob('test/*.png') as $file) {
+    $samples[] = [imagecreatefrompng($file)];
+    $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+}
 
-$extractor->export($estimator->steps());
+$testing = new Labeled($samples, $labels);
 
-$logger->info('Progress saved to progress.csv');
+$transformer->fit($testing);
+
+$testing->apply($transformer);
+
+$estimator->setValidationDataset($testing);
+
+$files = glob('train/*.png');
+
+$chunks = array_chunk($files, CHUNK_SIZE);
+
+foreach (enumerate($chunks, start: 1) as $i => $files) {
+    $logger->info("Training on chunk #{$i}");
+
+    $samples = $labels = [];
+
+    foreach ($files as $file) {
+        $samples[] = [imagecreatefrompng($file)];
+        $labels[] = preg_replace('/[0-9]+_(.*).png/', '$1', basename($file));
+    }
+
+    $training = new Labeled($samples, $labels);
+
+    $transformer->update($training);
+
+    $training->apply($transformer);
+
+    $estimator->partial($training);
+
+    $extractor = new CSV("progress_{$i}.csv", true);
+
+    $extractor->export($estimator->progress(), overwrite: true);
+
+    $logger->info("Progress saved to progress_{$i}.csv");
+}
 
 if (strtolower(trim(readline('Save this model? (y|[n]): '))) === 'y') {
+    $transformer->save();
     $estimator->save();
 }
